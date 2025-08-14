@@ -1,16 +1,15 @@
-
-
 import java.util.Scanner;
+import java.io.FileOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 // Interface for discount
-
 interface Discountable { 
-    double applyDiscount();        //USED BY PRODUCT AND SPECIAL PRODUCT CLASS
+    double applyDiscount();
 }
 
 // Product class
 class Product implements Discountable {
-
     private String name;
     private double price;
 
@@ -30,6 +29,11 @@ class Product implements Discountable {
     public void display(){
         System.out.println("Product: " + name + ", Price: Rs." + price);
     }
+
+    // Method to return product info as String for file writing
+    public String getInfo(){
+        return "Product: " + name + ", Price: Rs." + price;
+    }
 }
 
 // SpecialProduct with discount
@@ -43,13 +47,17 @@ class SpecialProduct extends Product {
 
     @Override
     public double applyDiscount(){
-        double discountedPrice = getPrice() - (getPrice() * discountPercent / 100);
-        return discountedPrice;
+        return getPrice() - (getPrice() * discountPercent / 100);
     }
 
     @Override
     public void display(){
         System.out.println("Special Product: " + getName() + ", Price after " + discountPercent + "% discount: Rs." + applyDiscount());
+    }
+
+    @Override
+    public String getInfo(){
+        return "Special Product: " + getName() + ", Price after " + discountPercent + "% discount: Rs." + applyDiscount();
     }
 }
 
@@ -102,22 +110,30 @@ class Cart {
 
         System.out.println("\nProcessing your checkout...\n");
 
-        Thread receiptThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                double total = 0;
-                try {
-                    if(p1 != null){ p1.display(); total += p1.applyDiscount(); Thread.sleep(1000); }
-                    if(p2 != null){ p2.display(); total += p2.applyDiscount(); Thread.sleep(1000); }
-                    if(p3 != null){ p3.display(); total += p3.applyDiscount(); Thread.sleep(1000); }
-                    if(p4 != null){ p4.display(); total += p4.applyDiscount(); Thread.sleep(1000); }
-                    if(p5 != null){ p5.display(); total += p5.applyDiscount(); Thread.sleep(1000); }
+        Thread receiptThread = new Thread(() -> {
+            double total = 0;
+            StringBuilder fileData = new StringBuilder();
+            try {
+                if(p1 != null){ p1.display(); total += p1.applyDiscount(); fileData.append(p1.getInfo()+"\n"); Thread.sleep(500); }
+                if(p2 != null){ p2.display(); total += p2.applyDiscount(); fileData.append(p2.getInfo()+"\n"); Thread.sleep(500); }
+                if(p3 != null){ p3.display(); total += p3.applyDiscount(); fileData.append(p3.getInfo()+"\n"); Thread.sleep(500); }
+                if(p4 != null){ p4.display(); total += p4.applyDiscount(); fileData.append(p4.getInfo()+"\n"); Thread.sleep(500); }
+                if(p5 != null){ p5.display(); total += p5.applyDiscount(); fileData.append(p5.getInfo()+"\n"); Thread.sleep(500); }
 
-                    System.out.println("\nFinal Amount: Rs." + total);
-                    System.out.println("Thank you for shopping with Mini Market!");
-                } catch (InterruptedException e) {
-                    System.out.println("Checkout interrupted.");
+                System.out.println("\nFinal Amount: Rs." + total);
+                System.out.println("Thank you for shopping with Mini Market!");
+
+                // Write cart data to a file
+                try (FileOutputStream fos = new FileOutputStream("CartReceipt.txt")) {
+                    String totalStr = "\nFinal Amount: Rs." + total;
+                    fileData.append(totalStr);
+                    fos.write(fileData.toString().getBytes());
+                } catch(IOException e){
+                    System.out.println("Error writing receipt to file: " + e.getMessage());
                 }
+
+            } catch (InterruptedException e) {
+                System.out.println("Checkout interrupted.");
             }
         });
 
@@ -132,12 +148,12 @@ class Cart {
 }
 
 // Main class
-public class MiniCartManager {
+public class proj2 {
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
         Cart cart = new Cart();
 
-        // Predefined product list
+        // Predefined product list (could also read from file using FileInputStream)
         Product[] gadgets = {
             new Product("USB Flash Drive", 500),
             new Product("Wireless Mouse", 800),
@@ -174,14 +190,10 @@ public class MiniCartManager {
                 int cat = Integer.parseInt(sc.nextLine());
 
                 Product[] selectedCategory = null;
-
                 if(cat == 1) selectedCategory = gadgets;
                 else if(cat == 2) selectedCategory = stationery;
                 else if(cat == 3) selectedCategory = specials;
-                else {
-                    System.out.println("Invalid category.");
-                    continue;
-                }
+                else { System.out.println("Invalid category."); continue; }
 
                 System.out.println("\nAvailable Products:");
                 for(int i=0; i<selectedCategory.length; i++){
@@ -198,18 +210,14 @@ public class MiniCartManager {
 
                 cart.addProduct(selectedCategory[choice - 1]);
 
-            }
-            else if(input.equals("2")){
+            } else if(input.equals("2")){
                 cart.viewCart();
-            }
-            else if(input.equals("3")){
+            } else if(input.equals("3")){
                 cart.checkout();
-            }
-            else if(input.equals("4")){
+            } else if(input.equals("4")){
                 System.out.println("Thank you for using Mini Market!");
                 break;
-            }
-            else{
+            } else{
                 System.out.println("Invalid option, try again.");
             }
         }
